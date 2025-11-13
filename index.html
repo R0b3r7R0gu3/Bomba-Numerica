@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bomba Numerica</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0221;
+            --primary-color: #00f5d4;
+            --secondary-color: #f6019d;
+            --accent-color: #fee440;
+            --error-color: #f94144;
+            --success-color: #90be6d;
+            --text-color: #f7f7f7;
+            --container-bg: rgba(10, 2, 30, 0.75);
+            --font-title: 'Orbitron', sans-serif;
+            --font-body: 'Rajdhani', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--text-color);
+            background: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+            transition: background-color 0.5s ease;
+        }
+
+        .scanline {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.4));
+            background-size: 100% 4px;
+            animation: scan 10s linear infinite;
+            pointer-events: none;
+            z-index: 2;
+        }
+        @keyframes scan { from { background-position-y: 0px; } to { background-position-y: 40px; } }
+
+        .particles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+
+        .game-container {
+            width: 90%; max-width: 550px; background: var(--container-bg);
+            border: 2px solid var(--primary-color); border-radius: 20px;
+            padding: 2rem 2.5rem;
+            box-shadow: 0 0 15px var(--primary-color), 0 0 35px var(--primary-color) inset, 0 0 60px var(--secondary-color);
+            backdrop-filter: blur(12px); position: relative; z-index: 1;
+            transition: border-color 0.5s ease, box-shadow 0.5s ease;
+        }
+
+        .low-time-warning { animation: pulse-red-border 1s infinite; }
+        @keyframes pulse-red-border {
+            0%, 100% { border-color: var(--primary-color); box-shadow: 0 0 15px var(--primary-color), 0 0 35px var(--primary-color) inset, 0 0 60px var(--secondary-color); }
+            50% { border-color: var(--error-color); box-shadow: 0 0 25px var(--error-color), 0 0 45px var(--error-color) inset, 0 0 70px var(--error-color); }
+        }
+
+        .screen { display: none; }
+        .screen.active { display: block; animation: fadeIn 0.6s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        h1, h2 {
+            font-family: var(--font-title); text-align: center; text-transform: uppercase;
+            letter-spacing: 4px; margin-bottom: 2rem; color: var(--primary-color);
+            text-shadow: 0 0 8px var(--primary-color), 0 0 15px #fff;
+            transition: color 0.5s ease, text-shadow 0.5s ease;
+        }
+        h1 { font-size: 2.5rem; animation: glitch 3s linear infinite; }
+        @keyframes glitch { 2%,64% { transform: translate(2px,0) skew(0deg); } 4%,60% { transform: translate(-2px,0) skew(0deg); } 62% { transform: translate(0,0) skew(5deg); } }
+        h1:before, h1:after {
+            content: attr(data-text); position: absolute; left: 0; width: 100%; height: 100%;
+            background: transparent; clip: rect(auto, auto, auto, auto);
+        }
+        h1:before { left: 2px; text-shadow: -2px 0 var(--secondary-color); animation: glitch-anim-2 3s linear infinite; }
+        h1:after { left: -2px; text-shadow: -2px 0 var(--accent-color), 2px 2px var(--primary-color); animation: glitch-anim-1 4s linear infinite; }
+        @keyframes glitch-anim-1 { 0%, 100% { clip: rect(42px, 9999px, 44px, 0); } 5%, 95% { clip: rect(82px, 9999px, 84px, 0); } }
+        @keyframes glitch-anim-2 { 0%, 100% { clip: rect(65px, 9999px, 110px, 0); } 10%, 90% { clip: rect(10px, 9999px, 95px, 0); } }
+
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group.fade-in { animation: fadeIn 0.5s ease-out forwards; }
+
+        label {
+            display: block; margin-bottom: 0.5rem; font-size: 1rem; font-weight: 500;
+            color: var(--accent-color); text-transform: uppercase;
+            transition: color 0.5s ease;
+        }
+
+        input, select {
+            width: 100%; padding: 0.8rem 1rem; background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--primary-color); border-radius: 8px; color: var(--text-color);
+            font-family: var(--font-body); font-size: 1.1rem; transition: all 0.3s ease;
+        }
+        input:focus, select:focus {
+            outline: none; border-color: var(--accent-color); box-shadow: 0 0 15px var(--accent-color);
+        }
+
+        button {
+            width: 100%; padding: 1rem; background: transparent; border: 2px solid var(--secondary-color);
+            border-radius: 8px; color: var(--secondary-color); font-family: var(--font-title);
+            font-size: 1.3rem; text-transform: uppercase; letter-spacing: 2px; cursor: pointer;
+            transition: all 0.3s ease; margin-top: 1.5rem; position: relative; overflow: hidden;
+            animation: pulse-glow 3s infinite ease-in-out;
+        }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 15px var(--secondary-color); } 50% { box-shadow: 0 0 25px var(--secondary-color); } }
+        button:before {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+            background: var(--secondary-color); border-radius: 50%;
+            transform: translate(-50%, -50%); transition: width 0.4s ease, height 0.4s ease; z-index: -1;
+        }
+        button:hover:before { width: 225%; height: 500%; }
+        button:hover { color: var(--bg-color); border-color: var(--secondary-color); }
+
+        #messages, #turn-info { text-align: center; min-height: 2.5em; margin: 1.5rem 0; font-size: 1.4rem; color: var(--accent-color); font-weight: bold; }
+        #turn-info { min-height: 1.5em; margin: 0.5rem 0 1.5rem; }
+        .cursor { animation: blink 1s step-end infinite; color: var(--accent-color); }
+        @keyframes blink { from, to { opacity: 1; } 50% { opacity: 0; } }
+
+        #status, #range-info {
+            text-align: center;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+        #range-info {
+            margin-top: -0.75rem;
+            opacity: 0.8;
+            color: var(--primary-color);
+            transition: color 0.5s ease;
+        }
+
+        #game-over-screen { text-align: center; }
+        #game-over-message { font-size: 3.5rem; margin-bottom: 1rem; }
+        #game-over-details { font-size: 1.3rem; margin-bottom: 2rem; }
+
+        .flash-red { animation: flash-red-bg 0.4s ease-out; }
+        @keyframes flash-red-bg { 0%, 100% { background-color: var(--bg-color); } 50% { background-color: var(--error-color); } }
+        .flash-green { animation: flash-green-bg 0.4s ease-out; }
+        @keyframes flash-green-bg { 0%, 100% { background-color: var(--bg-color); } 50% { background-color: var(--success-color); } }
+
+        #theme-switcher {
+            position: fixed; top: 20px; right: 20px; width: 40px; height: 40px;
+            cursor: pointer; z-index: 100; color: var(--primary-color);
+            transition: all 0.3s ease;
+        }
+        #theme-switcher:hover { transform: rotate(90deg) scale(1.1); color: var(--accent-color); }
+    </style>
+</head>
+<body>
+    <div class="scanline"></div>
+    <canvas class="particles"></canvas>
+    <div id="theme-switcher" title="Cambia Tema">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-3.5-7.5a4 4 0 1 1 8 0 4 4 0 0 1-8 0z"/></svg>
+    </div>
+    <div class="game-container">
+        <!-- Schermata di Setup -->
+        <div id="setup-screen" class="screen active">
+            <h1 data-text="Bomba Numerica">Bomba Numerica</h1>
+            <div class="form-group">
+                <label for="difficulty-select">Difficoltà:</label>
+                <select id="difficulty-select">
+                    <option value="facile">Facile (1-50)</option>
+                    <option value="medio" selected>Medio (1-100)</option>
+                    <option value="difficile">Difficile (1-200)</option>
+                    <option value="impossibile">Impossibile (1-500)</option>
+                    <option value="hardcore">Hardcore (Timer)</option>
+                </select>
+            </div>
+            <div class="form-group" id="hardcore-level-group" style="display: none;">
+                <label for="hardcore-level-select">Livello Hardcore:</label>
+                <select id="hardcore-level-select">
+                    <option value="1">Hardcore 1 (1-1000, 45s)</option>
+                    <option value="2">Hardcore 2 (1-2500, 40s)</option>
+                    <option value="3">Hardcore 3 (1-5000, 35s)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="players-count">Numero Giocatori (1-5):</label>
+                <input type="number" id="players-count" value="1" min="1" max="5">
+            </div>
+            <div id="player-names-container"></div>
+            <button id="start-game-button">Inizia Partita</button>
+        </div>
+
+        <!-- Schermata di Gioco -->
+        <div id="game-screen" class="screen">
+            <h2 id="turn-info"><span class="text"></span><span class="cursor">_</span></h2>
+            <p id="messages"><span class="text"></span><span class="cursor">_</span></p>
+            <div class="form-group">
+                <input type="number" id="guess-input" placeholder="Inserisci il tuo numero...">
+            </div>
+            <button id="guess-button">Indovina</button>
+            <p id="status"></p>
+            <p id="range-info"></p>
+            <div id="history-container" style="display: none;">
+                <ul id="history-list"></ul>
+            </div>
+        </div>
+
+        <!-- Schermata di Game Over -->
+        <div id="game-over-screen" class="screen">
+            <h1 id="game-over-message" data-text="GAME OVER"></h1>
+            <p id="game-over-details"></p>
+            <button id="play-again-button">Gioca Ancora</button>
+        </div>
+    </div>
+
+    <!-- Audio Effects -->
+    <audio id="audio-click" src="https://www.zapsplat.com/wp-content/uploads/2015/sound-effects-zapsplat/zapsplat_multimedia_button_click_fast_short_002_79285.mp3" preload="auto"></audio>
+    <audio id="audio-success" src="https://www.zapsplat.com/wp-content/uploads/2015/sound-effects-zapsplat/zapsplat_multimedia_game_sound_positive_award_bonus_point_001_66833.mp3" preload="auto"></audio>
+    <audio id="audio-error" src="https://www.zapsplat.com/wp-content/uploads/2015/sound-effects-zapsplat/zapsplat_multimedia_game_sound_error_incorrect_001_66839.mp3" preload="auto"></audio>
+    <audio id="audio-start" src="https://www.zapsplat.com/wp-content/uploads/2015/sound-effects-zapsplat/zapsplat_multimedia_game_sound_interface_select_001_66831.mp3" preload="auto"></audio>
+    <audio id="audio-type" src="https://cdn.freesound.org/previews/506/506320_1015240-lq.mp3" preload="auto" loop></audio>
+
+    <script>
+        const canvas = document.querySelector('.particles');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        let particlesArray;
+        let currentParticleColor = 'rgba(0, 245, 212, 0.8)';
+
+        let mouse = { x: null, y: null };
+        window.addEventListener('mousemove', (event) => { mouse.x = event.x; mouse.y = event.y; });
+        window.addEventListener('mouseout', () => { mouse.x = undefined; mouse.y = undefined; });
+
+        class Particle {
+            constructor(x, y, directionX, directionY, size, color) {
+                this.x = x; this.y = y; this.directionX = directionX; this.directionY = directionY;
+                this.size = size; this.color = color;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+            update() {
+                if (this.x > canvas.width || this.x < 0) { this.directionX = -this.directionX; }
+                if (this.y > canvas.height || this.y < 0) { this.directionY = -this.directionY; }
+                this.x += this.directionX;
+                this.y += this.directionY;
+                this.draw();
+            }
+        }
+
+        function initParticles() {
+            particlesArray = [];
+            let numberOfParticles = (canvas.height * canvas.width) / 11000;
+            for (let i = 0; i < numberOfParticles; i++) {
+                let size = (Math.random() * 1.5) + 1;
+                let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
+                let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
+                let directionX = (Math.random() * .4) - .2;
+                let directionY = (Math.random() * .4) - .2;
+                particlesArray.push(new Particle(x, y, directionX, directionY, size, currentParticleColor));
+            }
+        }
+
+        function connectParticles() {
+            let opacityValue = 1;
+            for (let a = 0; a < particlesArray.length; a++) {
+                for (let b = a; b < particlesArray.length; b++) {
+                    let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x))
+                                 + ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y));
+                    if (distance < (canvas.width/8) * (canvas.height/8)) {
+                        opacityValue = 1 - (distance/20000);
+                        ctx.strokeStyle = currentParticleColor.replace('0.8', opacityValue);
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                        ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animateParticles() {
+            requestAnimationFrame(animateParticles);
+            ctx.clearRect(0, 0, innerWidth, innerHeight);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+            }
+            connectParticles();
+        }
+        
+        window.addEventListener('resize', () => {
+            canvas.width = innerWidth;
+            canvas.height = innerHeight;
+            initParticles();
+        });
+
+        initParticles();
+        animateParticles();
+    </script>
+    <script src="Bomba-Numerica.js"></script>
+</body>
+</html>
